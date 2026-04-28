@@ -1,4 +1,7 @@
 node_modules/
 dist/
 *.tsbuildinfo
+.env
 CLAUDE.md
+TODO.md
+.vscode/
