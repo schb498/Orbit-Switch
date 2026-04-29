@@ -3,5 +3,6 @@ node_modules
 dist
 .env
 CLAUDE.md
+LEVEL_RULES.md
 TODO.md
 .vscode/

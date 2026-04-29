@@ -24,11 +24,11 @@ export function worldToSlot(wPos: number, rotation: number): number {
   return (((wPos - Math.round(rotation / 90)) % 4) + 4) % 4;
 }
 
-function getAtomAt(ring: Ring, wPos: number): string | null {
+function getOrbAt(ring: Ring, wPos: number): string | null {
   return ring.slots[worldToSlot(wPos, ring.rotation)] ?? null;
 }
 
-function withAtomAt(ring: Ring, wPos: number, color: string): Ring {
+function withOrbAt(ring: Ring, wPos: number, color: string): Ring {
   const slots = [...ring.slots];
   slots[worldToSlot(wPos, ring.rotation)] = color;
   return { ...ring, slots };
@@ -40,7 +40,7 @@ function clearAtWorld(ring: Ring, wPos: number): Ring {
   return { ...ring, slots };
 }
 
-// Clicking a ring: collect atoms from neighbour contact points, then rotate 90° CW.
+// Clicking a ring: collect orbs from neighbour contact points, then rotate 90° (CW or CCW per ring.direction).
 export function clickRing(state: GameState, ringIdx: number): GameState {
   const rings = state.rings.map((r) => ({ ...r, slots: [...r.slots] }));
 
@@ -49,27 +49,28 @@ export function clickRing(state: GameState, ringIdx: number): GameState {
       const src = rings[conn.a];
       const dst = rings[ringIdx];
       if (!src || !dst) continue;
-      const atom = getAtomAt(src, conn.aPos);
-      if (atom !== null && getAtomAt(dst, conn.bPos) === null) {
+      const orb = getOrbAt(src, conn.aPos);
+      if (orb !== null && getOrbAt(dst, conn.bPos) === null) {
         rings[conn.a] = clearAtWorld(src, conn.aPos);
-        rings[ringIdx] = withAtomAt(dst, conn.bPos, atom);
+        rings[ringIdx] = withOrbAt(dst, conn.bPos, orb);
       }
     }
     if (conn.a === ringIdx) {
       const src = rings[conn.b];
       const dst = rings[ringIdx];
       if (!src || !dst) continue;
-      const atom = getAtomAt(src, conn.bPos);
-      if (atom !== null && getAtomAt(dst, conn.aPos) === null) {
+      const orb = getOrbAt(src, conn.bPos);
+      if (orb !== null && getOrbAt(dst, conn.aPos) === null) {
         rings[conn.b] = clearAtWorld(src, conn.bPos);
-        rings[ringIdx] = withAtomAt(dst, conn.aPos, atom);
+        rings[ringIdx] = withOrbAt(dst, conn.aPos, orb);
       }
     }
   }
 
   const ring = rings[ringIdx];
   if (ring) {
-    rings[ringIdx] = { ...ring, rotation: ring.rotation + 90 };
+    const delta = ring.direction === 'ccw' ? -90 : 90;
+    rings[ringIdx] = { ...ring, rotation: ring.rotation + delta };
   }
 
   return { ...state, rings, moveCount: state.moveCount + 1 };
@@ -80,6 +81,6 @@ export function checkWin(state: GameState): boolean {
   return state.targets.every((t) => {
     const ring = state.rings[t.ringIndex];
     if (!ring) return false;
-    return getAtomAt(ring, t.wPos) === t.color;
+    return getOrbAt(ring, t.wPos) === t.color;
   });
 }

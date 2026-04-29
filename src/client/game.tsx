@@ -1,15 +1,15 @@
 import './index.css';
 
-import { StrictMode, useState } from 'react';
+import { type CSSProperties, StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { clickRing, checkWin, worldToSlot } from '../shared/engine/GameState';
 import type { GameState, Connection } from '../shared/engine/GameState';
 import type { Ring } from '../shared/engine/Ring';
-import { LEVELS, LEVEL_META } from '../shared/levels';
+import { LEVELS } from '../shared/levels';
 
 /* ── Constants (match design dimensions) ── */
 const RING_R = 62;
-const ATOM_R = 10;
+const ORB_R = 10;
 const VB_W = 416;
 const VB_H = 270;
 
@@ -31,7 +31,7 @@ function posXY(p: number): { x: number; y: number } {
   };
 }
 
-function getAtomAt(ring: Ring, wPos: number): string | null {
+function getOrbAt(ring: Ring, wPos: number): string | null {
   return ring.slots[worldToSlot(wPos, ring.rotation)] ?? null;
 }
 
@@ -45,14 +45,23 @@ interface RingViewProps {
   isHovering: boolean;
 }
 
-function RingView({ ring, onClick, interactive, isWin, onHover, isHovering }: RingViewProps) {
+function RingView({
+  ring,
+  onClick,
+  interactive,
+  isWin,
+  onHover,
+}: RingViewProps) {
   return (
     <g
       transform={`translate(${ring.x},${ring.y})`}
       onClick={interactive ? onClick : undefined}
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
-      style={{ cursor: interactive ? 'pointer' : 'default', pointerEvents: 'all' }}
+      style={{
+        cursor: interactive ? 'pointer' : 'default',
+        pointerEvents: 'all',
+      }}
     >
       <circle
         r={RING_R}
@@ -88,7 +97,13 @@ function RingView({ ring, onClick, interactive, isWin, onHover, isHovering }: Ri
 }
 
 /* ── RingHoverVisuals (hover ring + arrow, rendered on top layer) ── */
-function RingHoverVisuals({ ring, isHovering }: { ring: Ring; isHovering: boolean }) {
+function RingHoverVisuals({
+  ring,
+  isHovering,
+}: {
+  ring: Ring;
+  isHovering: boolean;
+}) {
   if (!isHovering) return null;
 
   return (
@@ -103,22 +118,25 @@ function RingHoverVisuals({ ring, isHovering }: { ring: Ring; isHovering: boolea
         strokeWidth="1.5"
         opacity={0.6}
       />
-      {/* CW arrow */}
+      {/* spin-direction arrow */}
       {(() => {
         const r = RING_R + 16;
         const a0 = -0.5,
           a1 = 1.1;
-        const x0 = r * Math.cos(a0),
-          y0 = r * Math.sin(a0);
-        const x1 = r * Math.cos(a1),
-          y1 = r * Math.sin(a1);
-        const tx = -Math.sin(a1),
-          ty = Math.cos(a1);
+        const ccw = ring.direction === 'ccw';
+        const x0 = r * Math.cos(ccw ? a1 : a0),
+          y0 = r * Math.sin(ccw ? a1 : a0);
+        const x1 = r * Math.cos(ccw ? a0 : a1),
+          y1 = r * Math.sin(ccw ? a0 : a1);
+        const sweep = ccw ? 0 : 1;
+        // tangent at arrowhead tip (perpendicular to radius, in travel direction)
+        const tx = ccw ? Math.sin(a0) : -Math.sin(a1);
+        const ty = ccw ? -Math.cos(a0) : Math.cos(a1);
         const ah = 6;
         return (
           <g opacity={0.55}>
             <path
-              d={`M ${x0} ${y0} A ${r} ${r} 0 0 1 ${x1} ${y1}`}
+              d={`M ${x0} ${y0} A ${r} ${r} 0 0 ${sweep} ${x1} ${y1}`}
               fill="none"
               stroke="#6a8acc"
               strokeWidth="1.5"
@@ -135,10 +153,10 @@ function RingHoverVisuals({ ring, isHovering }: { ring: Ring; isHovering: boolea
   );
 }
 
-/* ── RingAtoms — painted in two separate passes to guarantee z-order:
-     atomsOnly=false → empty slot markers only
-     atomsOnly=true  → filled atoms only                              ── */
-function RingAtoms({ ring, atomsOnly }: { ring: Ring; atomsOnly: boolean }) {
+/* ── RingOrbs — painted in two separate passes to guarantee z-order:
+     orbsOnly=false → empty slot markers only
+     orbsOnly=true  → filled orbs only                              ── */
+function RingOrbs({ ring, orbsOnly }: { ring: Ring; orbsOnly: boolean }) {
   return (
     <g
       transform={`translate(${ring.x},${ring.y})`}
@@ -154,17 +172,17 @@ function RingAtoms({ ring, atomsOnly }: { ring: Ring; atomsOnly: boolean }) {
         {[0, 1, 2, 3].map((si) => {
           const { x, y } = posXY(si);
           const color = ring.slots[si];
-          if (atomsOnly) {
+          if (orbsOnly) {
             if (!color) return null;
             const p = PAL[color];
             if (!p) return null;
             return (
               <g key={si}>
-                <circle cx={x} cy={y} r={ATOM_R + 7} fill={p.glow} />
+                <circle cx={x} cy={y} r={ORB_R + 7} fill={p.glow} />
                 <circle
                   cx={x}
                   cy={y}
-                  r={ATOM_R}
+                  r={ORB_R}
                   fill={p.fill}
                   style={{ filter: `drop-shadow(0 0 5px ${p.fill})` }}
                 />
@@ -189,7 +207,7 @@ function RingAtoms({ ring, atomsOnly }: { ring: Ring; atomsOnly: boolean }) {
   );
 }
 
-/* ── JunctionDot ── glows when an atom sits at the contact point */
+/* ── JunctionDot ── glows when an orb sits at the contact point */
 interface JunctionDotProps {
   rings: Ring[];
   conn: Connection;
@@ -204,11 +222,11 @@ function JunctionDot({ rings, conn }: JunctionDotProps) {
   const cx = ringA.x + RING_R * Math.cos(angle);
   const cy = ringA.y + RING_R * Math.sin(angle);
 
-  const atom = getAtomAt(ringA, conn.aPos) ?? getAtomAt(ringB, conn.bPos);
+  const orb = getOrbAt(ringA, conn.aPos) ?? getOrbAt(ringB, conn.bPos);
 
-  if (!atom) return null;
+  if (!orb) return null;
 
-  const p = PAL[atom];
+  const p = PAL[orb];
   if (!p) return null;
 
   return (
@@ -238,14 +256,16 @@ export const App = () => {
   const [game, setGame] = useState<GameState>(LEVELS[0]!);
   const [animating, setAnim] = useState(false);
   const [hoverRing, setHoverRing] = useState<number | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
+  const [showLevels, setShowLevels] = useState(false);
   const won = checkWin(game);
 
   // Per-target achievement status
-  const achieved = (game.targets).map((t) => {
+  const achieved = game.targets.map((t) => {
     const ring = game.rings[t.ringIndex];
     if (!ring) return false;
-    const atom = getAtomAt(ring, t.wPos);
-    return atom === t.color;
+    const orb = getOrbAt(ring, t.wPos);
+    return orb === t.color;
   });
 
   function handleClick(i: number) {
@@ -270,7 +290,22 @@ export const App = () => {
     goLevel(currentLevel + 1);
   }
 
-  const meta = LEVEL_META[currentLevel] ?? LEVEL_META[0]!;
+  const iconBtn: CSSProperties = {
+    background: 'transparent',
+    border: '1px solid #1c2c48',
+    borderRadius: '50%',
+    width: '32px',
+    height: '32px',
+    color: '#4a6890',
+    fontSize: '15px',
+    fontWeight: 700,
+    fontFamily: 'inherit',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  };
 
   return (
     <div
@@ -278,113 +313,132 @@ export const App = () => {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        padding: '22px 16px 28px',
+        padding: '16px 16px 28px',
         userSelect: 'none',
         minHeight: '100dvh',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
       }}
     >
-      <h1
-        style={{
-          fontSize: '26px',
-          fontWeight: 700,
-          letterSpacing: '-0.5px',
-          color: '#dce8ff',
-          marginBottom: '10px',
-        }}
-      >
-        Orbit Switch
-      </h1>
-
-      {/* Level tabs */}
-      <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
-        {LEVELS.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => goLevel(i)}
-            style={{
-              background:
-                i === currentLevel ? 'rgba(74,158,255,0.13)' : 'transparent',
-              border: `1px solid ${i === currentLevel ? 'rgba(74,158,255,0.45)' : '#1c2c48'}`,
-              borderRadius: '20px',
-              color: i === currentLevel ? '#4a9eff' : '#304060',
-              padding: '4px 14px',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              transition: 'all 0.15s',
-            }}
-          >{`Level ${i + 1}`}</button>
-        ))}
-      </div>
-
-      {/* Subtitle + moves */}
+      {/* ── Top bar ── */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
-          fontSize: '14px',
-          marginBottom: '10px',
+          justifyContent: 'space-between',
+          width: '100%',
+          maxWidth: '416px',
+          marginBottom: '14px',
         }}
       >
-        <span style={{ color: '#6a8fba' }}>{meta.subtitle}</span>
-        <span style={{ color: '#304870' }}>·</span>
-        <span style={{ color: '#7090b8' }}>
-          Moves: <strong style={{ color: '#b8d0ee' }}>{game.moveCount}</strong>
-        </span>
+        {/* Levels button — top left */}
+        <button
+          onClick={() => setShowLevels(true)}
+          style={{ ...iconBtn, borderRadius: '8px', width: 'auto', padding: '0 10px', fontSize: '12px', fontWeight: 600, gap: '5px' }}
+        >
+          ☰ Levels
+        </button>
+
+        {/* Title + move count — centre */}
+        <div style={{ textAlign: 'center', lineHeight: 1.2 }}>
+          <div style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px', color: '#dce8ff' }}>
+            Orbit Switch
+          </div>
+          <div style={{ fontSize: '12px', color: '#7090b8', marginTop: '2px' }}>
+            Moves: <strong style={{ color: '#b8d0ee' }}>{game.moveCount}</strong>
+            {' · '}
+            <span style={{ color: '#4a6890' }}>Level {currentLevel + 1}</span>
+          </div>
+        </div>
+
+        {/* Restart + Help — top right */}
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button
+            onClick={restart}
+            title="Restart"
+            style={iconBtn}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#6a90c0'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#304870'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#4a6890'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#1c2c48'; }}
+          >
+            ↺
+          </button>
+          <button onClick={() => setShowHelp(true)} style={iconBtn}>?</button>
+        </div>
       </div>
 
-      {/* Win banner */}
-      {won && (
+      {/* ── Level select modal ── */}
+      {showLevels && (
         <div
-          style={{
-            background: 'rgba(74,239,138,0.07)',
-            border: '1px solid rgba(74,239,138,0.28)',
-            borderRadius: '10px',
-            padding: '7px 22px',
-            color: '#4aef8a',
-            fontSize: '13px',
-            fontWeight: 600,
-            marginBottom: '10px',
-            animation: 'winPop 0.35s cubic-bezier(0.34,1.56,0.64,1) both',
-          }}
+          onClick={() => setShowLevels(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
         >
-          ✦ Solved in {game.moveCount} {game.moveCount === 1 ? 'move' : 'moves'}
-          !
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: '#0e1628', border: '1px solid #1c2c48', borderRadius: '14px', padding: '28px 32px', minWidth: '240px', color: '#dce8ff' }}
+          >
+            <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px', color: '#dce8ff' }}>
+              Levels
+            </h2>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
+              {LEVELS.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => { goLevel(i); setShowLevels(false); }}
+                  style={{
+                    background: i === currentLevel ? 'rgba(74,158,255,0.13)' : 'transparent',
+                    border: `1px solid ${i === currentLevel ? 'rgba(74,158,255,0.45)' : '#1c2c48'}`,
+                    borderRadius: '20px',
+                    color: i === currentLevel ? '#4a9eff' : '#8ab0d8',
+                    padding: '6px 16px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  Level {i + 1}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowLevels(false)}
+              style={{ background: 'rgba(74,158,255,0.10)', border: '1px solid rgba(74,158,255,0.30)', borderRadius: '8px', color: '#4a9eff', padding: '8px 20px', fontSize: '13px', fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', width: '100%' }}
+            >
+              Close
+            </button>
+          </div>
         </div>
       )}
-      {won && currentLevel + 1 < LEVELS.length && (
-        <button
-          onClick={nextLevel}
-          style={{
-            background: 'rgba(74,239,138,0.10)',
-            border: '1px solid rgba(74,239,138,0.35)',
-            borderRadius: '8px',
-            color: '#4aef8a',
-            padding: '8px 22px',
-            fontSize: '13px',
-            fontWeight: 600,
-            fontFamily: 'inherit',
-            cursor: 'pointer',
-            transition: 'all 0.15s',
-            marginBottom: '6px',
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background =
-              'rgba(74,239,138,0.18)';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background =
-              'rgba(74,239,138,0.10)';
-          }}
+
+      {/* ── Help modal ── */}
+      {showHelp && (
+        <div
+          onClick={() => setShowHelp(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
         >
-          Next Level →
-        </button>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: '#0e1628', border: '1px solid #1c2c48', borderRadius: '14px', padding: '28px 32px', maxWidth: '320px', color: '#dce8ff' }}
+          >
+            <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px', color: '#dce8ff' }}>
+              How to Play
+            </h2>
+            <ul style={{ color: '#8ab0d8', fontSize: '14px', lineHeight: 1.7, paddingLeft: '18px', marginBottom: '20px' }}>
+              <li>Click a ring to rotate it to move the orbs</li>
+              <li>Orbs can be passed between rings at their connection points.</li>
+              <li>Move all orbs to their target positions to solve the level.</li>
+            </ul>
+            <button
+              onClick={() => setShowHelp(false)}
+              style={{ background: 'rgba(74,158,255,0.10)', border: '1px solid rgba(74,158,255,0.30)', borderRadius: '8px', color: '#4a9eff', padding: '8px 20px', fontSize: '13px', fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', width: '100%' }}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
       )}
 
-      {/* SVG Board — render order matters for z-index */}
+      {/* ── SVG Board + win state — centred in remaining space ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, width: '100%' }}>
       <svg
         viewBox={`0 0 ${VB_W} ${VB_H}`}
         style={{ width: '100%', maxWidth: '416px', overflow: 'visible' }}
@@ -393,9 +447,7 @@ export const App = () => {
         {game.rings.map((ring, i) => {
           const ringHasTarget =
             won &&
-            (game.targets).some(
-              (t, ti) => t.ringIndex === i && achieved[ti]
-            );
+            game.targets.some((t, ti) => t.ringIndex === i && achieved[ti]);
           return (
             <RingView
               key={i}
@@ -411,11 +463,11 @@ export const App = () => {
 
         {/* Pass 2: Empty slot markers */}
         {game.rings.map((ring, i) => (
-          <RingAtoms key={i} ring={ring} atomsOnly={false} />
+          <RingOrbs key={i} ring={ring} orbsOnly={false} />
         ))}
 
         {/* Pass 3: Target position markers — above rings and empty slots */}
-        {(game.targets).map((t, i) => {
+        {game.targets.map((t, i) => {
           const ring = game.rings[t.ringIndex];
           if (!ring) return null;
           const pal = PAL[t.color];
@@ -427,7 +479,7 @@ export const App = () => {
               <circle
                 cx={x}
                 cy={y}
-                r={ATOM_R}
+                r={ORB_R}
                 fill="none"
                 stroke={pal.fill}
                 strokeWidth="2"
@@ -439,89 +491,81 @@ export const App = () => {
           );
         })}
 
-        {/* Pass 4: Ring labels */}
-        {game.rings.map((ring, i) => (
-          <text
-            key={i}
-            x={ring.x}
-            y={ring.y + RING_R + 17}
-            textAnchor="middle"
-            fill="#4a6890"
-            fontSize="12"
-            fontFamily="inherit"
-          >
-            {ring.label}
-          </text>
-        ))}
+        {/* Pass 4: Junction indicators — hidden during animation to avoid ghost orbs */}
+        {!animating &&
+          game.connections.map((conn, ci) => (
+            <JunctionDot key={ci} rings={game.rings} conn={conn} />
+          ))}
 
-        {/* Pass 5: Junction indicators — hidden during animation to avoid ghost atoms */}
-        {!animating && game.connections.map((conn, ci) => (
-          <JunctionDot key={ci} rings={game.rings} conn={conn} />
-        ))}
-
-        {/* Pass 6: Hover visuals (hover ring + arrow) — above targets, below atoms */}
+        {/* Pass 5: Hover visuals (hover ring + arrow) — above targets, below atoms */}
         {game.rings.map((ring, i) => (
           <RingHoverVisuals
             key={i}
             ring={ring}
-            isHovering={hoverRing === i && !animating}
+            isHovering={hoverRing === i && !animating && !won}
           />
         ))}
 
-        {/* Pass 7: Atoms — top layer */}
+        {/* Pass 6: Orbs — top layer */}
         {game.rings.map((ring, i) => (
-          <RingAtoms key={i} ring={ring} atomsOnly={true} />
+          <RingOrbs key={i} ring={ring} orbsOnly={true} />
         ))}
       </svg>
 
-      {/* Hint */}
-      {!won && (
-        <p
-          style={{
-            color: '#4a6890',
-            fontSize: '12px',
-            textAlign: 'center',
-            maxWidth: '280px',
-            lineHeight: 1.65,
-            marginTop: '6px',
-          }}
-        >
-          {meta.hint}
-          <br />
-          Click the rings to move the atoms to their target positions
-        </p>
-      )}
-
-      {/* Buttons */}
-      <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-        <button
-          onClick={restart}
-          style={{
-            background: 'transparent',
-            border: '1px solid #1c2c48',
-            borderRadius: '8px',
-            color: '#304060',
-            padding: '9px 22px',
-            fontSize: '13px',
-            fontWeight: 600,
-            fontFamily: 'inherit',
-            cursor: 'pointer',
-            transition: 'all 0.15s',
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor =
-              '#304870';
-            (e.currentTarget as HTMLButtonElement).style.color = '#6a90c0';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor =
-              '#1c2c48';
-            (e.currentTarget as HTMLButtonElement).style.color = '#304060';
-          }}
-        >
-          Restart
-        </button>
       </div>
+
+      {/* ── Win state — fixed at bottom, doesn't shift board ── */}
+      {won && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '28px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px',
+            animation: 'winPop 0.35s cubic-bezier(0.34,1.56,0.64,1) both',
+            zIndex: 50,
+          }}
+        >
+          <div
+            style={{
+              background: 'rgba(74,239,138,0.07)',
+              border: '1px solid rgba(74,239,138,0.28)',
+              borderRadius: '10px',
+              padding: '7px 22px',
+              color: '#4aef8a',
+              fontSize: '13px',
+              fontWeight: 600,
+            }}
+          >
+            ✦ Solved in {game.moveCount} {game.moveCount === 1 ? 'move' : 'moves'}!
+          </div>
+          {currentLevel + 1 < LEVELS.length && (
+            <button
+              onClick={nextLevel}
+              style={{
+                background: 'rgba(74,239,138,0.10)',
+                border: '1px solid rgba(74,239,138,0.35)',
+                borderRadius: '8px',
+                color: '#4aef8a',
+                padding: '8px 22px',
+                fontSize: '13px',
+                fontWeight: 600,
+                fontFamily: 'inherit',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,239,138,0.18)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,239,138,0.10)'; }}
+            >
+              Next Level →
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

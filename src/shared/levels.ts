@@ -1,5 +1,4 @@
 import type { GameState } from './engine/GameState';
-import type { WinTarget } from './engine/Ring';
 
 const RING_R = 62;
 
@@ -14,21 +13,30 @@ export const LEVEL_1: GameState = {
   connections: CONNECTIONS,
   rings: [
     {
-      id: 0, x: 84, y: 148, radius: RING_R,
+      id: 0,
+      x: 84,
+      y: 148,
+      radius: RING_R,
       rotation: 0,
       slots: ['blue', null, null, null],
       label: 'Ring 0',
       connectedTo: [1],
     },
     {
-      id: 1, x: 208, y: 148, radius: RING_R,
+      id: 1,
+      x: 208,
+      y: 148,
+      radius: RING_R,
       rotation: 0,
       slots: [null, null, null, null],
       label: 'Ring 1',
       connectedTo: [0, 2],
     },
     {
-      id: 2, x: 332, y: 148, radius: RING_R,
+      id: 2,
+      x: 332,
+      y: 148,
+      radius: RING_R,
       rotation: 0,
       slots: [null, null, null, null],
       label: 'Ring 2',
@@ -46,21 +54,30 @@ export const LEVEL_2: GameState = {
   connections: CONNECTIONS,
   rings: [
     {
-      id: 0, x: 84, y: 148, radius: RING_R,
+      id: 0,
+      x: 84,
+      y: 148,
+      radius: RING_R,
       rotation: 0,
       slots: ['blue', null, null, null],
       label: 'Ring 0',
       connectedTo: [1],
     },
     {
-      id: 1, x: 208, y: 148, radius: RING_R,
+      id: 1,
+      x: 208,
+      y: 148,
+      radius: RING_R,
       rotation: 0,
       slots: [null, null, null, null],
       label: 'Ring 1',
       connectedTo: [0, 2],
     },
     {
-      id: 2, x: 332, y: 148, radius: RING_R,
+      id: 2,
+      x: 332,
+      y: 148,
+      radius: RING_R,
       rotation: 0,
       slots: [null, null, 'orange', null],
       label: 'Ring 2',
@@ -69,13 +86,65 @@ export const LEVEL_2: GameState = {
   ],
   targets: [
     { ringIndex: 0, color: 'orange', wPos: 3 }, // orange must end up at Ring 0, left slot
-    { ringIndex: 2, color: 'blue', wPos: 1 },   // blue must end up at Ring 2, right slot
+    { ringIndex: 2, color: 'blue', wPos: 1 }, // blue must end up at Ring 2, right slot
   ],
 };
 
-export const LEVELS: GameState[] = [LEVEL_1, LEVEL_2];
+// Level 3 — Square Swap: route both orbs around a 2x2 grid
+export const LEVEL_3: GameState = {
+  moveCount: 0,
+  connections: [
+    { a: 0, aPos: 1, b: 1, bPos: 3 },
+    { a: 0, aPos: 2, b: 2, bPos: 0 },
+    { a: 1, aPos: 2, b: 3, bPos: 0 },
+    { a: 2, aPos: 1, b: 3, bPos: 3 },
+  ],
+  rings: [
+    {
+      id: 0,
+      x: 146,
+      y: 84,
+      radius: 62,
+      rotation: 0,
+      slots: [null, 'blue', null, null],
+      label: 'Ring 0',
+      connectedTo: [1, 2],
+    },
+    {
+      id: 1,
+      x: 270,
+      y: 84,
+      radius: 62,
+      rotation: 0,
+      slots: [null, null, null, null],
+      label: 'Ring 1',
+      connectedTo: [0, 3],
+    },
+    {
+      id: 2,
+      x: 146,
+      y: 208,
+      radius: 62,
+      rotation: 0,
+      slots: [null, null, null, null],
+      label: 'Ring 2',
+      connectedTo: [0, 3],
+    },
+    {
+      id: 3,
+      x: 270,
+      y: 208,
+      radius: 62,
+      rotation: 0,
+      slots: [null, null, null, 'orange'],
+      label: 'Ring 3',
+      connectedTo: [1, 2],
+    },
+  ],
+  targets: [
+    { ringIndex: 0, color: 'orange', wPos: 3 },
+    { ringIndex: 3, color: 'blue', wPos: 1 },
+  ],
+};
 
-export const LEVEL_META = [
-  { subtitle: 'Relay',    hint: 'Move blue from Ring 0 all the way to Ring 2.' },
-  { subtitle: 'The Swap', hint: 'Swap blue (Ring 0) and orange (Ring 2).' },
-];
+export const LEVELS: GameState[] = [LEVEL_1, LEVEL_2, LEVEL_3];
