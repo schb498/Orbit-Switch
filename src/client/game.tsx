@@ -2,7 +2,7 @@ import './index.css';
 
 import { type CSSProperties, StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { clickRing, checkWin, worldToSlot } from '../shared/engine/GameState';
+import { clickRing, checkWin, getOrbAt } from '../shared/engine/GameState';
 import type { GameState, Connection } from '../shared/engine/GameState';
 import type { Ring } from '../shared/engine/Ring';
 import { LEVELS } from '../shared/levels';
@@ -12,6 +12,7 @@ const RING_R = 62;
 const ORB_R = 10;
 const VB_W = 416;
 const VB_H = 270;
+const ANIM_MS = 380;
 
 const PAL: Record<string, { fill: string; glow: string }> = {
   blue: { fill: '#4a9eff', glow: 'rgba(74,158,255,0.38)' },
@@ -31,10 +32,6 @@ function posXY(p: number): { x: number; y: number } {
   };
 }
 
-function getOrbAt(ring: Ring, wPos: number): string | null {
-  return ring.slots[worldToSlot(wPos, ring.rotation)] ?? null;
-}
-
 /* ── RingView (body + hover, hover visuals rendered separately on top) ── */
 interface RingViewProps {
   ring: Ring;
@@ -42,7 +39,6 @@ interface RingViewProps {
   interactive: boolean;
   isWin: boolean;
   onHover: (hovering: boolean) => void;
-  isHovering: boolean;
 }
 
 function RingView({
@@ -166,7 +162,7 @@ function RingOrbs({ ring, orbsOnly }: { ring: Ring; orbsOnly: boolean }) {
         style={{
           transform: `rotate(${ring.rotation}deg)`,
           transformOrigin: '0px 0px',
-          transition: 'transform 0.38s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: `transform ${ANIM_MS / 1000}s cubic-bezier(0.4, 0, 0.2, 1)`,
         }}
       >
         {[0, 1, 2, 3].map((si) => {
@@ -272,7 +268,7 @@ export const App = () => {
     if (animating || won) return;
     setAnim(true);
     setGame(clickRing(game, i));
-    setTimeout(() => setAnim(false), 400);
+    setTimeout(() => setAnim(false), ANIM_MS);
   }
 
   function restart() {
@@ -456,7 +452,6 @@ export const App = () => {
               interactive={!animating && !won}
               isWin={ringHasTarget}
               onHover={(h) => setHoverRing(h ? i : null)}
-              isHovering={hoverRing === i}
             />
           );
         })}

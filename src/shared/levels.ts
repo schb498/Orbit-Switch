@@ -103,7 +103,7 @@ export const LEVEL_3: GameState = {
     {
       id: 0,
       x: 146,
-      y: 84,
+      y: 73,
       radius: 62,
       rotation: 0,
       slots: [null, 'blue', null, null],
@@ -113,7 +113,7 @@ export const LEVEL_3: GameState = {
     {
       id: 1,
       x: 270,
-      y: 84,
+      y: 73,
       radius: 62,
       rotation: 0,
       slots: [null, null, null, null],
@@ -123,7 +123,7 @@ export const LEVEL_3: GameState = {
     {
       id: 2,
       x: 146,
-      y: 208,
+      y: 197,
       radius: 62,
       rotation: 0,
       slots: [null, null, null, null],
@@ -133,7 +133,7 @@ export const LEVEL_3: GameState = {
     {
       id: 3,
       x: 270,
-      y: 208,
+      y: 197,
       radius: 62,
       rotation: 0,
       slots: [null, null, null, 'orange'],

@@ -24,7 +24,7 @@ export function worldToSlot(wPos: number, rotation: number): number {
   return (((wPos - Math.round(rotation / 90)) % 4) + 4) % 4;
 }
 
-function getOrbAt(ring: Ring, wPos: number): string | null {
+export function getOrbAt(ring: Ring, wPos: number): string | null {
   return ring.slots[worldToSlot(wPos, ring.rotation)] ?? null;
 }
 
