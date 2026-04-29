@@ -1,4 +1,10 @@
-import type { Ring, WinTarget } from './Ring';
+import type { Ring } from './Ring';
+
+export interface WinTarget {
+  ringIndex: number;
+  color: string;
+  wPos: number; // 0=top 1=right 2=bottom 3=left (world-space)
+}
 
 export interface Connection {
   a: number;    // ring index
@@ -11,10 +17,10 @@ export interface GameState {
   rings: Ring[];
   connections: Connection[];
   moveCount: number;
-  targets?: WinTarget[]; // optional: win conditions for this level
+  targets: WinTarget[];
 }
 
-function worldToSlot(wPos: number, rotation: number): number {
+export function worldToSlot(wPos: number, rotation: number): number {
   return (((wPos - Math.round(rotation / 90)) % 4) + 4) % 4;
 }
 
@@ -70,11 +76,10 @@ export function clickRing(state: GameState, ringIdx: number): GameState {
 }
 
 export function checkWin(state: GameState): boolean {
-  if (!state.targets || state.targets.length === 0) return false;
+  if (state.targets.length === 0) return false;
   return state.targets.every((t) => {
     const ring = state.rings[t.ringIndex];
     if (!ring) return false;
-    const atom = getAtomAt(ring, t.wPos);
-    return atom === t.color;
+    return getAtomAt(ring, t.wPos) === t.color;
   });
 }

@@ -2,9 +2,9 @@ import './index.css';
 
 import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { clickRing, checkWin } from '../shared/engine/GameState';
+import { clickRing, checkWin, worldToSlot } from '../shared/engine/GameState';
 import type { GameState, Connection } from '../shared/engine/GameState';
-import type { Ring, WinTarget } from '../shared/engine/Ring';
+import type { Ring } from '../shared/engine/Ring';
 import { LEVELS, LEVEL_META } from '../shared/levels';
 
 /* ── Constants (match design dimensions) ── */
@@ -31,10 +31,6 @@ function posXY(p: number): { x: number; y: number } {
   };
 }
 
-function worldToSlot(wPos: number, rotation: number): number {
-  return (((wPos - Math.round(rotation / 90)) % 4) + 4) % 4;
-}
-
 function getAtomAt(ring: Ring, wPos: number): string | null {
   return ring.slots[worldToSlot(wPos, ring.rotation)] ?? null;
 }
@@ -54,7 +50,7 @@ function RingView({ ring, onClick, interactive, isWin, onHover, isHovering }: Ri
     <g
       transform={`translate(${ring.x},${ring.y})`}
       onClick={interactive ? onClick : undefined}
-      onMouseEnter={() => interactive && onHover(true)}
+      onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
       style={{ cursor: interactive ? 'pointer' : 'default', pointerEvents: 'all' }}
     >
@@ -204,9 +200,9 @@ function JunctionDot({ rings, conn }: JunctionDotProps) {
   const ringB = rings[conn.b];
   if (!ringA || !ringB) return null;
 
-  // Contact point: right edge of ring A (aPos=1)
-  const cx = ringA.x + RING_R;
-  const cy = ringA.y;
+  const angle = posAngle(conn.aPos);
+  const cx = ringA.x + RING_R * Math.cos(angle);
+  const cy = ringA.y + RING_R * Math.sin(angle);
 
   const atom = getAtomAt(ringA, conn.aPos) ?? getAtomAt(ringB, conn.bPos);
 
@@ -245,7 +241,7 @@ export const App = () => {
   const won = checkWin(game);
 
   // Per-target achievement status
-  const achieved = (game.targets ?? []).map((t) => {
+  const achieved = (game.targets).map((t) => {
     const ring = game.rings[t.ringIndex];
     if (!ring) return false;
     const atom = getAtomAt(ring, t.wPos);
@@ -254,7 +250,6 @@ export const App = () => {
 
   function handleClick(i: number) {
     if (animating || won) return;
-    setHoverRing(null);
     setAnim(true);
     setGame(clickRing(game, i));
     setTimeout(() => setAnim(false), 400);
@@ -398,7 +393,7 @@ export const App = () => {
         {game.rings.map((ring, i) => {
           const ringHasTarget =
             won &&
-            (game.targets ?? []).some(
+            (game.targets).some(
               (t, ti) => t.ringIndex === i && achieved[ti]
             );
           return (
@@ -420,7 +415,7 @@ export const App = () => {
         ))}
 
         {/* Pass 3: Target position markers — above rings and empty slots */}
-        {(game.targets ?? []).map((t, i) => {
+        {(game.targets).map((t, i) => {
           const ring = game.rings[t.ringIndex];
           if (!ring) return null;
           const pal = PAL[t.color];
@@ -469,7 +464,7 @@ export const App = () => {
           <RingHoverVisuals
             key={i}
             ring={ring}
-            isHovering={hoverRing === i}
+            isHovering={hoverRing === i && !animating}
           />
         ))}
 
