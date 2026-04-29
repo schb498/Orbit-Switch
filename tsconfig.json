@@ -1,19 +1,9 @@
 {
-  "compilerOptions": {
-    "target": "ES2020",
-    "lib": ["ES2020"],
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "jsx": "react",
-    "jsxFactory": "Devvit.createElement",
-    "jsxFragmentFactory": "Devvit.Fragment",
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "exactOptionalPropertyTypes": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "skipLibCheck": true
-  },
-  "include": ["src"]
+  "files": [],
+  "references": [
+    { "path": "./tools/tsconfig.client.json" },
+    { "path": "./tools/tsconfig.server.json" },
+    { "path": "./tools/tsconfig.shared.json" },
+    { "path": "./tools/tsconfig.vite.json" }
+  ]
 }

@@ -1,6 +1,6 @@
-node_modules/
-dist/
-*.tsbuildinfo
+node_modules
+.DS_Store
+dist
 .env
 CLAUDE.md
 TODO.md
