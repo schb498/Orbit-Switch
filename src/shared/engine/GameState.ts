@@ -1,80 +1,77 @@
-import type { Ring } from './Ring.js';
-import type { Atom } from './Atom.js';
-import { checkAlignment } from './alignment.js';
+import type { Ring } from './Ring';
+
+export interface Connection {
+  a: number;    // ring index
+  aPos: number; // world-space slot on ring a  (0=top 1=right 2=bottom 3=left)
+  b: number;    // ring index
+  bPos: number; // world-space slot on ring b
+}
 
 export interface GameState {
   rings: Ring[];
+  connections: Connection[];
   moveCount: number;
 }
 
-export function rotateRing(
-  state: GameState,
-  ringId: number,
-  direction: 'cw' | 'ccw',
-  degrees: number = 90,
-): GameState {
-  const delta = direction === 'cw' ? degrees : -degrees;
-  return {
-    ...state,
-    moveCount: state.moveCount + 1,
-    rings: state.rings.map(r =>
-      r.id === ringId
-        ? { ...r, angle: ((r.angle + delta) % 360 + 360) % 360 }
-        : r,
-    ),
-  };
+function worldToSlot(wPos: number, rotation: number): number {
+  return (((wPos - Math.round(rotation / 90)) % 4) + 4) % 4;
 }
 
-export function canTransfer(
-  state: GameState,
-  fromRingId: number,
-  toRingId: number,
-): boolean {
-  const from = state.rings.find(r => r.id === fromRingId);
-  const to = state.rings.find(r => r.id === toRingId);
-  if (!from || !to) return false;
-  return from.connectedTo.includes(toRingId) && checkAlignment(from, to);
+function getAtomAt(ring: Ring, wPos: number): string | null {
+  return ring.slots[worldToSlot(wPos, ring.rotation)] ?? null;
 }
 
-export function transferAtom(
-  state: GameState,
-  atomId: string,
-  fromRingId: number,
-  toRingId: number,
-): GameState | null {
-  if (!canTransfer(state, fromRingId, toRingId)) return null;
+function withAtomAt(ring: Ring, wPos: number, color: string): Ring {
+  const slots = [...ring.slots];
+  slots[worldToSlot(wPos, ring.rotation)] = color;
+  return { ...ring, slots };
+}
 
-  const fromRing = state.rings.find(r => r.id === fromRingId)!;
-  const atomIndex = fromRing.slots.findIndex(a => a?.id === atomId);
-  if (atomIndex === -1) return null;
+function clearAtWorld(ring: Ring, wPos: number): Ring {
+  const slots = [...ring.slots];
+  slots[worldToSlot(wPos, ring.rotation)] = null;
+  return { ...ring, slots };
+}
 
-  const toRing = state.rings.find(r => r.id === toRingId)!;
-  const emptySlot = toRing.slots.findIndex(s => s === null);
-  if (emptySlot === -1) return null;
+// Clicking a ring: collect atoms from neighbour contact points, then rotate 90° CW.
+export function clickRing(state: GameState, ringIdx: number): GameState {
+  const rings = state.rings.map((r) => ({ ...r, slots: [...r.slots] }));
 
-  const atom = fromRing.slots[atomIndex] as Atom;
-
-  return {
-    ...state,
-    moveCount: state.moveCount + 1,
-    rings: state.rings.map(r => {
-      if (r.id === fromRingId) {
-        const slots = [...r.slots];
-        slots[atomIndex] = null;
-        return { ...r, slots };
+  for (const conn of state.connections) {
+    if (conn.b === ringIdx) {
+      const src = rings[conn.a];
+      const dst = rings[ringIdx];
+      if (!src || !dst) continue;
+      const atom = getAtomAt(src, conn.aPos);
+      if (atom !== null && getAtomAt(dst, conn.bPos) === null) {
+        rings[conn.a] = clearAtWorld(src, conn.aPos);
+        rings[ringIdx] = withAtomAt(dst, conn.bPos, atom);
       }
-      if (r.id === toRingId) {
-        const slots = [...r.slots];
-        slots[emptySlot] = atom;
-        return { ...r, slots };
+    }
+    if (conn.a === ringIdx) {
+      const src = rings[conn.b];
+      const dst = rings[ringIdx];
+      if (!src || !dst) continue;
+      const atom = getAtomAt(src, conn.bPos);
+      if (atom !== null && getAtomAt(dst, conn.aPos) === null) {
+        rings[conn.b] = clearAtWorld(src, conn.bPos);
+        rings[ringIdx] = withAtomAt(dst, conn.aPos, atom);
       }
-      return r;
-    }),
-  };
+    }
+  }
+
+  const ring = rings[ringIdx];
+  if (ring) {
+    rings[ringIdx] = { ...ring, rotation: ring.rotation + 90 };
+  }
+
+  return { ...state, rings, moveCount: state.moveCount + 1 };
 }
 
 export function checkWin(state: GameState): boolean {
-  return state.rings.every(ring =>
-    ring.slots.every(atom => atom === null || atom.targetRingId === ring.id),
-  );
+  return state.rings.every((ring) => {
+    if (!ring.target) return true;
+    const atoms = ring.slots.filter((s): s is string => s !== null);
+    return atoms.length > 0 && atoms.every((a) => a === ring.target);
+  });
 }

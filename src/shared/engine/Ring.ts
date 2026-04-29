@@ -1,11 +1,11 @@
-import type { Atom } from './Atom.js';
-
 export interface Ring {
   id: number;
   x: number;
   y: number;
   radius: number;
-  angle: number;          // 0–359 degrees
-  slots: (Atom | null)[];
-  connectedTo: number[];  // IDs of rings atoms can transfer to/from
+  rotation: number;          // accumulating CW degrees for CSS transform
+  slots: (string | null)[]; // 4 local slots: 0=top 1=right 2=bottom 3=left
+  target: string | null;
+  label: string;
+  connectedTo: number[];
 }

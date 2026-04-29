@@ -1,1 +1,25 @@
 @import 'tailwindcss';
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0c1120;
+  color: #dce8ff;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+@keyframes winPop {
+  0%   { transform: scale(0.8); opacity: 0; }
+  65%  { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes junctionPulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 1; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
