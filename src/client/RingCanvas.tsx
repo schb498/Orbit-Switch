@@ -1,28 +1,7 @@
 import { getOrbAt } from '../shared/engine/GameState';
 import type { Connection } from '../shared/engine/GameState';
 import type { Ring } from '../shared/engine/Ring';
-
-export const RING_R = 62;
-export const ORB_R = 10;
-export const VB_W = 416;
-export const VB_H = 270;
-export const ANIM_MS = 380;
-
-export const PAL: Record<string, { fill: string; glow: string }> = {
-  blue: { fill: '#4a9eff', glow: 'rgba(74,158,255,0.38)' },
-  orange: { fill: '#ff8c42', glow: 'rgba(255,140,66,0.38)' },
-};
-
-/* pos: 0=top  1=right  2=bottom  3=left  (world space) */
-function posAngle(p: number): number {
-  return ((p * 90 - 90) * Math.PI) / 180;
-}
-export function posXY(p: number): { x: number; y: number } {
-  return {
-    x: RING_R * Math.cos(posAngle(p)),
-    y: RING_R * Math.sin(posAngle(p)),
-  };
-}
+import { RING_R, ORB_R, ANIM_MS, PAL, posAngle, posXY } from './constants';
 
 export interface RingViewProps {
   ring: Ring;
@@ -60,6 +39,16 @@ export function RingView({
           filter: isWin ? 'drop-shadow(0 0 8px rgba(74,239,138,0.5))' : 'none',
         }}
       />
+
+      {/* Bigger centre direction indicator */}
+      <circle
+        cx={0}
+        cy={0}
+        r={8}
+        fill={ring.direction === 'ccw' ? '#f59e0b' : '#60a5fa'} // orange = CCW, blue = CW
+        opacity={0.95}
+      />
+
       {[0, 1, 2, 3].map((p) => {
         const a = posAngle(p);
         const r0 = RING_R - 7,
@@ -102,31 +91,43 @@ export function RingHoverVisuals({
         strokeWidth="1.5"
         opacity={0.6}
       />
+
+      {/* Arrow now orbits around centre indicator */}
       {(() => {
-        const r = RING_R + 16;
-        const a0 = -0.5,
-          a1 = 1.1;
+        const r = 12; // just outside centre circle (radius 8)
+
+        const step = Math.PI / 2;
+        const base = -Math.PI / 2;
+
         const ccw = ring.direction === 'ccw';
-        const x0 = r * Math.cos(ccw ? a1 : a0),
-          y0 = r * Math.sin(ccw ? a1 : a0);
-        const x1 = r * Math.cos(ccw ? a0 : a1),
-          y1 = r * Math.sin(ccw ? a0 : a1);
+
+        const a0 = base;
+        const a1 = ccw ? base - step : base + step;
+
+        const x0 = r * Math.cos(a0);
+        const y0 = r * Math.sin(a0);
+        const x1 = r * Math.cos(a1);
+        const y1 = r * Math.sin(a1);
+
         const sweep = ccw ? 0 : 1;
-        const tx = ccw ? Math.sin(a0) : -Math.sin(a1);
-        const ty = ccw ? -Math.cos(a0) : Math.cos(a1);
-        const ah = 6;
+
+        const tx = Math.cos(a1 + (ccw ? -Math.PI / 2 : Math.PI / 2));
+        const ty = Math.sin(a1 + (ccw ? -Math.PI / 2 : Math.PI / 2));
+
+        const ah = 5;
+
         return (
-          <g opacity={0.55}>
+          <g opacity={0.85}>
             <path
               d={`M ${x0} ${y0} A ${r} ${r} 0 0 ${sweep} ${x1} ${y1}`}
               fill="none"
-              stroke="#6a8acc"
-              strokeWidth="1.5"
+              stroke="#e5e7eb"
+              strokeWidth="2"
               strokeLinecap="round"
             />
             <polygon
               points={`${x1 + tx * ah},${y1 + ty * ah} ${x1 - tx * 3 - ty * 3},${y1 - ty * 3 + tx * 3} ${x1 - tx * 3 + ty * 3},${y1 + ty * 3 + tx * 3}`}
-              fill="#6a8acc"
+              fill="#e5e7eb"
             />
           </g>
         );

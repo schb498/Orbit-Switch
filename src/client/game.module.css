@@ -63,7 +63,6 @@
 }
 
 .levelsBtn {
-  color-scheme: iconBtn;
   border-radius: 8px;
   width: auto;
   padding: 0 10px;
@@ -97,12 +96,10 @@
 }
 
 .modalBoxLevels {
-  color-scheme: modalBox;
   min-width: 240px;
 }
 
 .modalBoxHelp {
-  color-scheme: modalBox;
   max-width: 320px;
 }
 

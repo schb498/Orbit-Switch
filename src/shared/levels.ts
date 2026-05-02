@@ -147,4 +147,60 @@ export const LEVEL_3: GameState = {
   ],
 };
 
-export const LEVELS: GameState[] = [LEVEL_1, LEVEL_2, LEVEL_3];
+export const LEVEL_4: GameState = {
+  moveCount: 0,
+  connections: [
+    { a: 0, aPos: 2, b: 2, bPos: 0 },
+    { a: 1, aPos: 1, b: 2, bPos: 3 },
+    { a: 2, aPos: 1, b: 3, bPos: 3 },
+  ],
+  rings: [
+    {
+      id: 0,
+      x: 208,
+      y: 73,
+      radius: 62,
+      rotation: 0,
+      slots: ['orange', null, null, null],
+      label: 'Ring 0',
+      connectedTo: [2],
+    },
+    {
+      id: 1,
+      x: 84,
+      y: 197,
+      radius: 62,
+      rotation: 0,
+      slots: ['blue', null, null, null],
+      label: 'Ring 1',
+      connectedTo: [2],
+    },
+    {
+      id: 2,
+      x: 208,
+      y: 197,
+      radius: 62,
+      rotation: 0,
+      slots: [null, null, null, null],
+      label: 'Ring 2',
+      connectedTo: [0, 1, 3],
+    },
+    {
+      id: 3,
+      x: 332,
+      y: 197,
+      radius: 62,
+      rotation: 0,
+      slots: [null, null, 'blue', null],
+      label: 'Ring 3',
+      connectedTo: [2],
+    },
+  ],
+  targets: [
+    { ringIndex: 2, color: 'orange', wPos: 2 },
+    { ringIndex: 0, color: 'blue', wPos: 1 },
+    { ringIndex: 0, color: 'blue', wPos: 3 },
+  ],
+};
+
+export const LEVELS: GameState[] = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4];

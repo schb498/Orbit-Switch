@@ -1,15 +1,10 @@
 import { Hono } from 'hono';
 import { context, reddit } from '@devvit/web/server';
+import type { InitResponse } from '../../shared/api';
 
 type ErrorResponse = {
   status: 'error';
   message: string;
-};
-
-type InitResponse = {
-  type: 'init';
-  postId: string;
-  username: string;
 };
 
 export const api = new Hono();

@@ -5,18 +5,8 @@ import { createRoot } from 'react-dom/client';
 import { clickRing, checkWin, getOrbAt } from '../shared/engine/GameState';
 import type { GameState } from '../shared/engine/GameState';
 import { LEVELS } from '../shared/levels';
-import {
-  ORB_R,
-  VB_W,
-  VB_H,
-  ANIM_MS,
-  PAL,
-  posXY,
-  RingView,
-  RingHoverVisuals,
-  RingOrbs,
-  JunctionDot,
-} from './RingCanvas';
+import { ORB_R, VB_W, VB_H, ANIM_MS, PAL, posXY } from './constants';
+import { RingView, RingHoverVisuals, RingOrbs, JunctionDot } from './RingCanvas';
 import styles from './game.module.css';
 
 export const App = () => {
@@ -48,6 +38,7 @@ export const App = () => {
   }
 
   function goLevel(idx: number) {
+    if (idx < 0 || idx >= LEVELS.length) return;
     setCurrentLevel(idx);
     setGame(LEVELS[idx]!);
     setAnim(false);
@@ -63,7 +54,7 @@ export const App = () => {
       <div className={styles.topBar}>
         <button
           onClick={() => setShowLevels(true)}
-          className={styles.levelsBtn}
+          className={`${styles.iconBtn} ${styles.levelsBtn}`}
         >
           ☰ Levels
         </button>
@@ -96,7 +87,7 @@ export const App = () => {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className={styles.modalBoxLevels}
+            className={`${styles.modalBox} ${styles.modalBoxLevels}`}
           >
             <h2 className={styles.modalTitle}>Levels</h2>
             <div
@@ -151,7 +142,7 @@ export const App = () => {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className={styles.modalBoxHelp}
+            className={`${styles.modalBox} ${styles.modalBoxHelp}`}
           >
             <h2 className={styles.modalTitle}>How to Play</h2>
             <ul className={styles.helpList}>
